@@ -12,7 +12,7 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - set -euo pipefail
+      - set -eu
       - export AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
       - export IMAGE_TAG="${IMAGE_TAG:-${CODEBUILD_RESOLVED_SOURCE_VERSION:-local}}"
       - export ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"

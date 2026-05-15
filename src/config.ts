@@ -7,7 +7,9 @@ import {
   DEFAULT_JSON_BODY_LIMIT_MB,
   DEFAULT_MAX_POOL_SIZE,
   DEFAULT_METRICS_REQUIRE_AUTH,
+  DEFAULT_METRICS_ENABLED,
   DEFAULT_SENTRY_ENABLE_LOGS,
+  NODE_ENV_PRODUCTION,
   DEFAULT_SENTRY_ENABLE_PROFILING,
   DEFAULT_SENTRY_SEND_DEFAULT_PII,
   DEFAULT_MONGO_MIGRATE_CHANGELOG_NAME,
@@ -29,12 +31,16 @@ import {
 
 loadDotenv({ quiet: true });
 
-export function buildMongoDatabaseUrl(uri: string, dbName: string): string {
+export function buildMongoDatabaseUrl(
+  uri: string,
+  dbName: string,
+  maxPoolSize: number = DEFAULT_MAX_POOL_SIZE,
+): string {
   const base = uri.trim().replace(/\/+$/, "");
   const path = `${base}/${dbName}`;
   const params = new URLSearchParams({
     serverSelectionTimeoutMS: String(DEFAULT_SERVER_SELECTION_TIMEOUT_MS),
-    maxPoolSize: String(DEFAULT_MAX_POOL_SIZE),
+    maxPoolSize: String(maxPoolSize),
   });
   return `${path}?${params.toString()}`;
 }
@@ -72,6 +78,12 @@ const envSchema = z
       .string()
       .min(SCHEMA_MIN_STRING_LENGTH)
       .default(DEFAULT_MONGO_MIGRATE_CHANGELOG_NAME),
+    API_DOCS_ENABLED: z.string().optional(),
+    METRICS_ENABLED: z
+      .string()
+      .optional()
+      .transform((raw) => isEnvTruthyString(raw, DEFAULT_METRICS_ENABLED)),
+    MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().optional(),
     SENTRY_DSN: z.string().optional(),
     SENTRY_RELEASE: z.string().optional(),
     SENTRY_ENABLE_LOGS: z
@@ -101,9 +113,20 @@ const envSchema = z
     path: ["HTTP_HEADERS_TIMEOUT_MS"],
   })
   .transform((d) => {
+    const maxPoolSize = d.MONGODB_MAX_POOL_SIZE ?? DEFAULT_MAX_POOL_SIZE;
     const databaseUrl =
-      d.DATABASE_URL?.trim() || buildMongoDatabaseUrl(d.MONGODB_URI, d.MONGODB_DB_NAME);
-    return { ...d, databaseUrl };
+      d.DATABASE_URL?.trim() ||
+      buildMongoDatabaseUrl(d.MONGODB_URI, d.MONGODB_DB_NAME, maxPoolSize);
+    const apiDocsDefault = d.NODE_ENV !== NODE_ENV_PRODUCTION;
+    const apiDocsEnabled =
+      d.API_DOCS_ENABLED === undefined || d.API_DOCS_ENABLED === ""
+        ? apiDocsDefault
+        : isEnvTruthyString(d.API_DOCS_ENABLED, apiDocsDefault);
+    return {
+      ...d,
+      databaseUrl,
+      API_DOCS_ENABLED: apiDocsEnabled,
+    };
   });
 
 export type Env = z.infer<typeof envSchema>;

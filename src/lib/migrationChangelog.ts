@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "@prisma/client";
+import type { Db } from "mongodb";
 
 export type MigrationChangelogRow = {
   fileName: string;
@@ -27,46 +27,27 @@ function serializeAppliedAt(value: unknown): string | "PENDING" | null {
   return null;
 }
 
-function parseFindFirstBatch(raw: unknown): MigrationChangelogRow[] {
-  if (typeof raw !== "object" || raw === null) {
-    return [];
-  }
-  const cursor = (raw as Record<string, unknown>).cursor;
-  if (typeof cursor !== "object" || cursor === null) {
-    return [];
-  }
-  const firstBatch = (cursor as Record<string, unknown>).firstBatch;
-  if (!Array.isArray(firstBatch)) {
-    return [];
-  }
+export async function readMigrationChangelog(
+  db: Db,
+  collectionName: string,
+): Promise<MigrationChangelogRow[]> {
+  const docs = await db
+    .collection(collectionName)
+    .find({})
+    .sort({ fileName: 1 })
+    .limit(500)
+    .toArray();
 
   const rows: MigrationChangelogRow[] = [];
-  for (const doc of firstBatch) {
-    if (typeof doc !== "object" || doc === null) {
-      continue;
-    }
-    const d = doc as Record<string, unknown>;
-    const fileName = d.fileName;
+  for (const doc of docs) {
+    const fileName = doc.fileName;
     if (typeof fileName !== "string") {
       continue;
     }
     rows.push({
       fileName,
-      appliedAt: serializeAppliedAt(d.appliedAt),
+      appliedAt: serializeAppliedAt(doc.appliedAt),
     });
   }
   return rows;
-}
-
-export async function readMigrationChangelog(
-  prisma: PrismaClient,
-  collectionName: string,
-): Promise<MigrationChangelogRow[]> {
-  const raw = await prisma.$runCommandRaw({
-    find: collectionName,
-    filter: {},
-    sort: { fileName: 1 },
-    batchSize: 500,
-  } as Prisma.InputJsonObject);
-  return parseFindFirstBatch(raw);
 }

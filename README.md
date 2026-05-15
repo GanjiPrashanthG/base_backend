@@ -46,6 +46,8 @@ For the full stack without npm scripts, run: `docker compose --profile api up -d
 
 Product hardening checklist: [`docs/BACKEND-EXTENSIONS.md`](docs/BACKEND-EXTENSIONS.md).
 
+AWS deploy (VPC → ECR → ECS Fargate → CodePipeline / CodeBuild): [`docs/AWS-CODEPIPELINE-DEPLOY.md`](docs/AWS-CODEPIPELINE-DEPLOY.md) and root [`buildspec.yml`](buildspec.yml).
+
 ## MongoDB and Prisma
 
 The app uses **[Prisma ORM 6](https://www.prisma.io/docs/orm/overview/databases/mongodb)** with the MongoDB provider. **Prisma 7 does not support MongoDB yet**; this repo pins `prisma` / `@prisma/client` to **6.19.x** until that changes.

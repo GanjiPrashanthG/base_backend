@@ -1,11 +1,10 @@
-import * as Sentry from "@sentry/node";
 import compression from "compression";
 import cors, { type CorsOptions } from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PrismaClient } from "@prisma/client";
+import type { AppMongo } from "./lib/mongo.js";
 import { pinoHttp } from "pino-http";
 import type { Logger } from "pino";
 import {
@@ -24,10 +23,11 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 import { requireAdminKeyStrict } from "./middleware/requireAdminKey.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
-import apiDocsRouter from "./routes/apiDocs.js";
 import { createApiBundleRouter } from "./routes/apiBundle.js";
+import { createLazyApiDocsRouter } from "./routes/apiDocsLazy.js";
+import type { SentryModule } from "./lib/sentry.js";
 import { createHealthRouter } from "./routes/health.js";
-import metricsRouter from "./routes/metrics.js";
+import { createLazyMetricsRouter } from "./routes/metricsLazy.js";
 import rootRouter from "./routes/root.js";
 
 function shouldIgnoreHttpAccessLog(req: Pick<IncomingMessage, "method" | "url">): boolean {
@@ -72,23 +72,27 @@ function buildCorsOptions(env: Env): CorsOptions {
   return { origin: true };
 }
 
-function mountMetricsRouter(env: Env): ReturnType<typeof express.Router> {
+function mountMetricsRouter(env: Env): ReturnType<typeof express.Router> | undefined {
+  if (!env.METRICS_ENABLED) {
+    return undefined;
+  }
   const r = express.Router();
   if (env.METRICS_REQUIRE_AUTH) {
     r.use(requireAdminKeyStrict(env));
   }
-  r.use(metricsRouter);
+  r.use(createLazyMetricsRouter());
   return r;
 }
 
 export type CreateAppOptions = {
   logger: Logger;
   env: Env;
-  prisma?: PrismaClient;
+  mongo?: AppMongo;
+  sentry?: SentryModule;
 };
 
 export function createApp(options: CreateAppOptions) {
-  const { logger, env, prisma } = options;
+  const { logger, env, mongo, sentry } = options;
   const app = express();
   app.disable("x-powered-by");
 
@@ -99,8 +103,13 @@ export function createApp(options: CreateAppOptions) {
   app.use(requestIdMiddleware);
   app.use(compression());
   app.use(cors(buildCorsOptions(env)));
-  app.use(API_DOCS_PATH, apiDocsRouter);
-  app.use(mountMetricsRouter(env));
+  if (env.API_DOCS_ENABLED) {
+    app.use(API_DOCS_PATH, createLazyApiDocsRouter());
+  }
+  const metrics = mountMetricsRouter(env);
+  if (metrics) {
+    app.use(metrics);
+  }
   app.use(helmet());
   app.use(
     rateLimit({
@@ -136,13 +145,13 @@ export function createApp(options: CreateAppOptions) {
   );
 
   app.use(rootRouter);
-  app.use(createHealthRouter({ prisma, mongodbEnabled: env.MONGODB_ENABLED }));
-  const apiBundle = createApiBundleRouter({ prisma, env });
+  app.use(createHealthRouter({ mongo, mongodbEnabled: env.MONGODB_ENABLED }));
+  const apiBundle = createApiBundleRouter({ mongo, env });
   app.use(API_ROUTE_PREFIX, apiBundle);
   app.use(API_ROUTE_PREFIX_V1, apiBundle);
 
-  if (Sentry.isInitialized()) {
-    Sentry.setupExpressErrorHandler(app);
+  if (sentry?.isInitialized()) {
+    sentry.setupExpressErrorHandler(app);
   }
 
   app.use(notFoundHandler);

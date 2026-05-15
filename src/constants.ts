@@ -114,7 +114,7 @@ export const DEFAULT_MAX_POOL_SIZE = 10;
 export const DEFAULT_HTTP_REQUEST_TIMEOUT_MS = 60_000;
 export const DEFAULT_HTTP_HEADERS_TIMEOUT_MS = 65_000;
 
-/** After SIGINT/SIGTERM: max wait for `server.close` + Prisma disconnect before `process.exit` */
+/** After SIGINT/SIGTERM: max wait for `server.close` + MongoDB close before `process.exit` */
 export const DEFAULT_SHUTDOWN_GRACE_MS = 15_000;
 
 /** Express `trust proxy`: hop count when behind reverse proxy (0 = off) */
@@ -134,6 +134,12 @@ export const DEFAULT_SENTRY_SEND_DEFAULT_PII = false;
  * profiles (Alpine/glibc prebuilds vary; CI/smoke tests stay lean).
  */
 export const DEFAULT_SENTRY_ENABLE_PROFILING = false;
+
+/** Mount Scalar at `/api/docs` when env unset (off by default in production via config transform) */
+export const DEFAULT_API_DOCS_ENABLED = true;
+
+/** Expose Prometheus metrics at `GET /metrics` */
+export const DEFAULT_METRICS_ENABLED = true;
 
 /** Env strings treated as boolean true (trimmed, lowercased) */
 export const ENV_TRUTHY_STRINGS = ["1", "true", "yes"] as const;

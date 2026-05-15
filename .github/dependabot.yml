@@ -5,10 +5,3 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    # Prisma 7+ does not support MongoDB; stay on Prisma 6.x until that changes. Ignore major bumps so Dependabot
-    # still proposes 6.x patches/minors without opening failing Prisma 7 PRs.
-    ignore:
-      - dependency-name: "prisma"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@prisma/client"
-        update-types: ["version-update:semver-major"]

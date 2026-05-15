@@ -31,7 +31,7 @@ function buildApiPaths(prefix: string) {
     },
     [`${prefix}${API_DB_HEALTH_PATH}`]: {
       get: {
-        summary: "Database ping (when Prisma enabled)",
+        summary: "Database ping (when MongoDB enabled)",
         responses: { "200": { description: "OK + latencyMs" } },
       },
     },

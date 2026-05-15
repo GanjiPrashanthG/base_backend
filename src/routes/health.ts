@@ -1,21 +1,20 @@
-import type { PrismaClient } from "@prisma/client";
 import { Router } from "express";
+import type { AppMongo } from "../lib/mongo.js";
 import {
   HEALTH_LIVENESS_BODY,
   HEALTH_READY_PATH,
   HEALTH_ROUTE_PATH,
-  HTTP_STATUS_SERVICE_UNAVAILABLE,
 } from "../constants.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
 
-export type CreateHealthRouterOptions = {
-  prisma?: PrismaClient;
+export type HealthRouterOptions = {
+  mongo?: AppMongo;
   mongodbEnabled: boolean;
 };
 
-export function createHealthRouter(options: CreateHealthRouterOptions) {
-  const { prisma, mongodbEnabled } = options;
+export function createHealthRouter(options: HealthRouterOptions) {
   const router = Router();
+  const { mongo, mongodbEnabled } = options;
 
   router.get(HEALTH_ROUTE_PATH, (_req, res) => {
     res.json(HEALTH_LIVENESS_BODY);
@@ -24,18 +23,19 @@ export function createHealthRouter(options: CreateHealthRouterOptions) {
   router.get(
     HEALTH_READY_PATH,
     asyncHandler(async (_req, res) => {
-      if (!mongodbEnabled || prisma === undefined) {
+      if (!mongodbEnabled || mongo === undefined) {
         res.json({ ready: true, database: "disabled" });
         return;
       }
       const started = Date.now();
       try {
-        await prisma.$runCommandRaw({ ping: 1 });
+        await mongo.ping();
         res.json({ ready: true, database: "ok", latencyMs: Date.now() - started });
       } catch {
-        res.status(HTTP_STATUS_SERVICE_UNAVAILABLE).json({
+        res.status(503).json({
           ready: false,
-          database: "unavailable",
+          database: "error",
+          latencyMs: Date.now() - started,
         });
       }
     }),

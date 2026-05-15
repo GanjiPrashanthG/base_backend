@@ -15,7 +15,7 @@ describe("HTTP API", () => {
 
   before(() => {
     const env = loadConfig();
-    app = createApp({ logger: silent, env, prisma: undefined });
+    app = createApp({ logger: silent, env, mongo: undefined });
   });
 
   it("GET / returns service metadata", async () => {
@@ -43,7 +43,7 @@ describe("HTTP API", () => {
     assert.ok(typeof res.body.message === "string");
   });
 
-  it("GET /api/migrations returns 404 when Prisma is not mounted", async () => {
+  it("GET /api/migrations returns 404 when MongoDB is not mounted", async () => {
     await request(app).get("/api/migrations").expect(404);
   });
 

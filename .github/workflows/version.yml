@@ -1,0 +1,23 @@
+# SemVer policy: package.json "version" must follow https://semver.org/ (npm standard).
+# For git tags v*, the tag must match package.json (e.g. v1.2.3 ↔ 1.2.3).
+name: version
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run version:validate
+      - run: node scripts/verify-release-tag.mjs

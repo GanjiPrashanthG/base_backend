@@ -1,0 +1,24 @@
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Same image as CI/Dockerfile — opt-in: `docker compose --profile api up -d`
+  api:
+    profiles: ["api"]
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3000"
+      MONGODB_ENABLED: "1"
+      DATABASE_URL: mongodb://mongo:27017/mayday?serverSelectionTimeoutMS=5000&maxPoolSize=10
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:

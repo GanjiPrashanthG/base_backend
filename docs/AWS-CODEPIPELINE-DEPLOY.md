@@ -191,7 +191,9 @@ Do **not** run destructive migrations automatically on production without review
 | Symptom | Likely cause |
 |-----------|----------------|
 | Task fails to start, cannot pull image | Task execution role missing ECR pull; or no route to ECR (NAT / VPC endpoints) |
-| Target unhealthy | Wrong container port, SG blocking ALB → task, or health check path hits DB when Mongo is down |
+| Target unhealthy — **Request timed out** | **Task SG** not allowing TCP **3000** from **ALB SG**; or app bound to `127.0.0.1` (`HOST` not `0.0.0.0`); or task not listening / crashed |
+| Target unhealthy — HTTP **404** / wrong code | Health check path wrong; use **`/health`** (see [`deploy/alb-health-check.md`](../deploy/alb-health-check.md)) |
+| Target unhealthy with `/health/ready` | Mongo down or unreachable; use **`/health`** for ALB liveness or fix DB connectivity |
 | `502` from ALB | Task crashing; check stopped task reason and CloudWatch logs |
 | Wrong client IP | `TRUST_PROXY_HOPS` not set for ALB hop count |
 

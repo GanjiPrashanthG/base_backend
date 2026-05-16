@@ -29,7 +29,10 @@ import {
   SCHEMA_MIN_STRING_LENGTH,
 } from "./constants.js";
 
-loadDotenv({ quiet: true });
+const dotenvPath =
+  process.env.DOTENV_PATH ??
+  (process.env.NODE_ENV === NODE_ENV_PRODUCTION ? ".env.production" : ".env");
+loadDotenv({ path: dotenvPath, quiet: true });
 
 export function buildMongoDatabaseUrl(
   uri: string,

@@ -1,12 +1,3 @@
-# AWS CodeBuild — build Docker image, push to ECR, produce imagedefinitions.json for ECS (CodePipeline deploy).
-# Required env vars on the CodeBuild project:
-#   AWS_DEFAULT_REGION       (e.g. us-east-1)
-#   IMAGE_REPO_NAME          ECR repository name (must exist)
-#   CONTAINER_NAME           Must match the container name in the ECS task definition
-# Optional:
-#   IMAGE_TAG                  Defaults to CODEBUILD_RESOLVED_SOURCE_VERSION, else "local"
-#   AWS_ACCOUNT_ID             Defaults to sts get-caller-identity
-
 version: 0.2
 
 phases:
@@ -20,10 +11,12 @@ phases:
       - echo "Building and pushing ${ECR_URI}:${IMAGE_TAG}"
       - aws ecr describe-repositories --repository-names "${IMAGE_REPO_NAME}" --region "${AWS_DEFAULT_REGION}"
       - aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
   build:
     commands:
       - docker build -t "${IMAGE_REPO_NAME}:${IMAGE_TAG}" .
       - docker tag "${IMAGE_REPO_NAME}:${IMAGE_TAG}" "${ECR_URI}:${IMAGE_TAG}"
+
   post_build:
     commands:
       - docker push "${ECR_URI}:${IMAGE_TAG}"

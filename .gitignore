@@ -1,5 +1,8 @@
 node_modules/
 dist/
 .env
+.env.production
+.env.local
+deploy/aws-ecs.env
 *.log
 .DS_Store
